@@ -77,8 +77,8 @@ public class AuthController {
         return ResponseEntity.ok(new AuthenticationResponse(jwt, user.getIdUser().longValue(), user.getUsername(), roles));
     }
 
-    @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody UserDTO userDTO) throws InvalidObjectException {
+    @PostMapping("/signup-user")
+    public ResponseEntity<?> signupUser(@RequestBody UserDTO userDTO) throws InvalidObjectException {
         User oldUser = userRepository.findByUsername(userDTO.getUsername());
         if(oldUser != null) {
             throw new BadRequestException("Username has already exists");
@@ -89,6 +89,27 @@ public class AuthController {
 
         //gán role member cho user mới lập
         Role role = roleRepository.findByName("ROLE_USER");
+        user.setRoles(Set.of(role));
+
+        User newUser = userRepository.save(user);
+
+        final UserDetails userDetails = myUserDetailsService.loadUserByUsername(newUser.getUsername());
+        final String jwt = jwtUtil.generateToken(userDetails);
+
+        return ResponseEntity.ok(new AuthenticationResponse(jwt, newUser.getIdUser().longValue(), newUser.getUsername(), List.of(role.getName())));
+    }
+    @PostMapping("/signup-admin")
+    public ResponseEntity<?> signupAdmin(@RequestBody UserDTO userDTO) throws InvalidObjectException {
+        User oldUser = userRepository.findByUsername(userDTO.getUsername());
+        if(oldUser != null) {
+            throw new BadRequestException("Username has already exists");
+        }
+        User user = new User();
+        Convert.fromUserDTOToUser(userDTO,user);
+        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
+
+        //gán role member cho user mới lập
+        Role role = roleRepository.findByName("ROLE_ADMIN");
         user.setRoles(Set.of(role));
 
         User newUser = userRepository.save(user);
